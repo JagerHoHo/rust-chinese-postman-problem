@@ -1,0 +1,15 @@
+[package]
+name = "chinese_postman_problem"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cpp_solver = { path = "cpp_solver" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
