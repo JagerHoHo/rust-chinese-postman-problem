@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use ndarray::{Array1, Array2, ArrayView1};
 
 #[derive(Debug)]
@@ -15,12 +17,15 @@ struct Edge {
 pub struct GraphBuilder {
     edges: Vec<Edge>,
     max_node: usize,
+    node_labels: HashMap<String, usize>,
+    used_labels: HashSet<String>,
 }
 
 pub struct Graph {
     pub(super) weight_matrix: Array2<f64>,
     pub(super) out_degrees: Array1<usize>,
     pub(super) edge_count: Array2<usize>,
+    pub(super) node_labels: Vec<String>,
 }
 
 impl ImbalancedNodeSet {
@@ -34,6 +39,8 @@ impl GraphBuilder {
         Self {
             edges: Vec::new(),
             max_node: 0,
+            node_labels: HashMap::new(),
+            used_labels: HashSet::new(),
         }
     }
 
@@ -43,13 +50,36 @@ impl GraphBuilder {
         self
     }
 
+    pub fn add_labeled_edge(&mut self, from_label: &str, to_label: &str, weight: f64) -> &mut Self {
+        if !self.used_labels.contains(from_label) {
+            self.node_labels
+                .insert(from_label.to_string(), self.used_labels.len());
+            self.used_labels.insert(from_label.to_string());
+        }
+        if !self.used_labels.contains(to_label) {
+            self.node_labels
+                .insert(to_label.to_string(), self.used_labels.len());
+            self.used_labels.insert(to_label.to_string());
+        }
+        let from = self.node_labels[from_label];
+        let to = self.node_labels[to_label];
+        self.add_edge(from, to, weight)
+    }
+
     pub fn build(self) -> Graph {
         let mut weight_matrix =
             Array2::from_elem((self.max_node + 1, self.max_node + 1), f64::INFINITY);
         for edge in self.edges {
             weight_matrix[[edge.from, edge.to]] = edge.weight;
         }
-        Graph::from_weight_matrix(weight_matrix)
+        let mut node_labels = Vec::new();
+        node_labels.resize(self.node_labels.len(), String::new());
+        for (label, node) in self.node_labels {
+            node_labels[node] = label;
+        }
+        let mut graph = Graph::from_weight_matrix(weight_matrix);
+        graph.relabel(node_labels);
+        graph
     }
 }
 
@@ -69,7 +99,12 @@ impl Graph {
                 .collect(),
             edge_count: weight_matrix.mapv(|x| if x != f64::INFINITY { 1 } else { 0 }),
             weight_matrix,
+            node_labels: Vec::new(),
         }
+    }
+
+    pub(crate) fn relabel(&mut self, node_labels: Vec<String>) {
+        self.node_labels = node_labels;
     }
 
     pub(crate) fn out_degrees(&self) -> Array1<usize> {

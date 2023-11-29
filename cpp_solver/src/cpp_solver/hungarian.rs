@@ -15,17 +15,15 @@ pub(super) fn best_match(
         shortest_distance_between_nodes,
     );
     let (_, best_match) = kuhn_munkres_min(&weights);
-    imbalanced_nodes
-        .positive_difference_nodes
+    let mut matching = HashMap::new();
+    for (from, to) in imbalanced_nodes
+        .negative_difference_nodes
         .iter()
         .zip(best_match.iter())
-        .map(|(from, to)| {
-            (
-                imbalanced_nodes.negative_difference_nodes[*from],
-                imbalanced_nodes.positive_difference_nodes[*to],
-            )
-        })
-        .collect()
+    {
+        matching.insert(*from, imbalanced_nodes.positive_difference_nodes[*to]);
+    }
+    matching
 }
 
 fn shortest_distances_between_imbalanced_nodes(

@@ -18,7 +18,6 @@ pub struct CppSolver {
     graph: Graph,
     floyd_warshall: FloydWarshallRunner,
     hierholzer: HierholzerRunner,
-    labels: Vec<String>,
 }
 
 impl CppSolver {
@@ -27,15 +26,7 @@ impl CppSolver {
             floyd_warshall: FloydWarshallRunner::new(graph.weight_matrix.clone()),
             hierholzer: HierholzerRunner::new(),
             graph,
-            labels: Vec::new(),
         }
-    }
-
-    pub fn set_labels(&mut self, labels: Vec<String>) {
-        if labels.len() != self.graph.weight_matrix.nrows() {
-            panic!("Number of labels must match number of nodes");
-        }
-        self.labels = labels;
     }
 
     pub fn solve(&mut self) -> Option<Path> {
@@ -49,7 +40,7 @@ impl CppSolver {
         Some(Path::new(
             self.hierholzer.path(),
             &self.graph.weight_matrix,
-            &self.labels,
+            &self.graph.node_labels,
         ))
     }
 
