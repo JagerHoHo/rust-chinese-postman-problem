@@ -9,12 +9,7 @@ mod tests {
     use super::*;
     use graph::GraphBuilder;
 
-    #[test]
-    fn test_circle() {
-        let mut graph_builder = GraphBuilder::new();
-        for i in 0..5 {
-            graph_builder.add_edge(i, (i + 1) % 5, 1.);
-        }
+    fn check_path(graph_builder: GraphBuilder) {
         let graph = graph_builder.build();
         let mut solver = CppSolver::new(graph);
         match solver.solve() {
@@ -23,6 +18,15 @@ mod tests {
             }
             None => panic!("No solution found"),
         }
+    }
+
+    #[test]
+    fn test_circle() {
+        let mut graph_builder = GraphBuilder::new();
+        for i in 0..5 {
+            graph_builder.add_edge(i, (i + 1) % 5, 1.);
+        }
+        check_path(graph_builder);
     }
 
     #[test]
@@ -40,14 +44,7 @@ mod tests {
             .add_edge(4, 0, 12.)
             .add_edge(4, 5, 1.)
             .add_edge(5, 2, 22.);
-        let graph = graph_builder.build();
-        let mut solver = CppSolver::new(graph);
-        match solver.solve() {
-            Some(path) => {
-                println!("{}", path);
-            }
-            None => panic!("No solution found"),
-        }
+        check_path(graph_builder);
     }
 
     #[test]
@@ -65,14 +62,26 @@ mod tests {
             .add_labeled_edge("e", "a", 12.)
             .add_labeled_edge("e", "f", 1.)
             .add_labeled_edge("f", "c", 22.);
+        check_path(graph_builder);
+    }
 
-        let graph = graph_builder.build();
-        let mut solver = CppSolver::new(graph);
-        match solver.solve() {
-            Some(path) => {
-                println!("{}", path);
-            }
-            None => panic!("No solution found"),
-        }
+    #[test]
+    fn test_odd_in_out_diff() {
+        let mut graph_builder = GraphBuilder::new();
+        graph_builder
+            .add_labeled_edge("a", "c", 20.)
+            .add_labeled_edge("a", "b", 10.)
+            .add_labeled_edge("b", "e", 10.)
+            .add_labeled_edge("b", "d", 50.)
+            .add_labeled_edge("c", "e", 33.)
+            .add_labeled_edge("c", "d", 20.)
+            .add_labeled_edge("d", "e", 5.)
+            .add_labeled_edge("d", "f", 12.)
+            .add_labeled_edge("e", "a", 12.)
+            .add_labeled_edge("e", "f", 1.)
+            .add_labeled_edge("f", "c", 22.)
+            .add_labeled_edge("g", "c", 88.)
+            .add_labeled_edge("a", "g", 18.);
+        check_path(graph_builder);
     }
 }

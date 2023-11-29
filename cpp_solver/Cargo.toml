@@ -12,6 +12,7 @@ ndarray = { version = "*", default-features = true, features = [
 ndarray-stats = "*"
 pathfinding = "*"
 ordered-float = "*"
+
 [profile.release]
 lto = true
 codegen-units = 1
