@@ -78,7 +78,11 @@ impl GraphBuilder {
             node_labels[node] = label;
         }
         let mut graph = Graph::from_weight_matrix(weight_matrix);
-        graph.relabel(node_labels);
+        graph.relabel(if node_labels.is_empty() {
+            None
+        } else {
+            Some(node_labels)
+        });
         graph
     }
 }
@@ -98,13 +102,16 @@ impl Graph {
                 .map(|row| row.iter().filter(|x| **x != f64::INFINITY).count())
                 .collect(),
             edge_count: weight_matrix.mapv(|x| if x != f64::INFINITY { 1 } else { 0 }),
-            weight_matrix,
             node_labels: Vec::new(),
+            weight_matrix,
         }
     }
 
-    pub(crate) fn relabel(&mut self, node_labels: Vec<String>) {
-        self.node_labels = node_labels;
+    pub(crate) fn relabel(&mut self, node_labels: Option<Vec<String>>) {
+        self.node_labels = match node_labels {
+            Some(node_labels) => node_labels,
+            None => Vec::from_iter((0..self.weight_matrix.nrows()).map(|x| x.to_string())),
+        }
     }
 
     pub(crate) fn out_degrees(&self) -> Array1<usize> {
@@ -112,7 +119,10 @@ impl Graph {
     }
 
     pub(crate) fn add_edge(&mut self, from: usize, to: usize, weight: f64) {
-        println!("Edge added from {} to {}", from, to);
+        println!(
+            "Edge added from {} to {}",
+            self.node_labels[from], self.node_labels[to]
+        );
         self.weight_matrix[[from, to]] = weight;
         self.out_degrees[from] += 1;
         self.edge_count[[from, to]] += 1;

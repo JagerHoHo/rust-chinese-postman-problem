@@ -1,15 +1,9 @@
-use std::{
-    collections::{BinaryHeap, HashMap, VecDeque},
-    ops::Index,
-};
+use std::collections::{BinaryHeap, HashMap, VecDeque};
 
-use ndarray::{Array, Array2, ArrayView2, Axis};
+use ndarray::{Array2, ArrayView2, Axis};
 use ndarray_stats::QuantileExt;
 use ordered_float::OrderedFloat;
-use pathfinding::{
-    kuhn_munkres::{kuhn_munkres_min, Weights},
-    prelude::Matrix,
-};
+use pathfinding::{kuhn_munkres::kuhn_munkres_min, prelude::Matrix};
 
 use crate::graph::ImbalancedNodeSet;
 
@@ -42,28 +36,12 @@ pub(super) fn best_match(
     );
     let mut neg_nodes = VecDeque::from_iter(&imbalanced_nodes.negative_difference_nodes);
     if weights.nrows() > weights.ncols() {
-        let in_out_diff = weights.nrows() - weights.ncols();
-        let mut heap = BinaryHeap::new();
-        for (i, row) in weights.rows().into_iter().enumerate() {
-            let row_min = *row.min().unwrap();
-            heap.push(ShortestFirst { row: i, row_min });
-        }
-        let mut del_rows = Vec::new();
-        for _ in 0..in_out_diff {
-            let ShortestFirst { mut row, .. } = heap.pop().unwrap();
-            for del_row in &del_rows {
-                if row > *del_row {
-                    row -= 1;
-                }
-            }
-            del_rows.push(row);
-            matching.insert(
-                imbalanced_nodes.negative_difference_nodes[row],
-                imbalanced_nodes.positive_difference_nodes[weights.row(row).argmin().unwrap()],
-            );
-            neg_nodes.remove(row);
-            weights.remove_index(Axis(0), row);
-        }
+        greedy_matching(
+            &mut weights,
+            &mut matching,
+            imbalanced_nodes,
+            &mut neg_nodes,
+        );
     }
     let weights = Matrix::from_rows(
         weights
@@ -95,4 +73,34 @@ fn shortest_distances_between_imbalanced_nodes(
             OrderedFloat(shortest_distance_between_nodes[(from, to)])
         },
     )
+}
+
+fn greedy_matching(
+    weights: &mut Array2<OrderedFloat<f64>>,
+    matching: &mut HashMap<usize, usize>,
+    imbalanced_nodes: &ImbalancedNodeSet,
+    neg_nodes: &mut VecDeque<&usize>,
+) {
+    let in_out_diff = weights.nrows() - weights.ncols();
+    let mut heap = BinaryHeap::new();
+    for (i, row) in weights.rows().into_iter().enumerate() {
+        let row_min = *row.min().unwrap();
+        heap.push(ShortestFirst { row: i, row_min });
+    }
+    let mut del_rows = Vec::new();
+    for _ in 0..in_out_diff {
+        let ShortestFirst { mut row, .. } = heap.pop().unwrap();
+        for del_row in &del_rows {
+            if row > *del_row {
+                row -= 1;
+            }
+        }
+        del_rows.push(row);
+        matching.insert(
+            imbalanced_nodes.negative_difference_nodes[row],
+            imbalanced_nodes.positive_difference_nodes[weights.row(row).argmin().unwrap()],
+        );
+        neg_nodes.remove(row);
+        weights.remove_index(Axis(0), row);
+    }
 }
