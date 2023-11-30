@@ -116,6 +116,6 @@ impl fmt::Display for Path {
                 }
             })
             .collect::<String>();
-        write!(f, "path: {}, cost: {}", path, self.cost)
+        write!(f, "Path: {}, Cost: {}", path, self.cost)
     }
 }
