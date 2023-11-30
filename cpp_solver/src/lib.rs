@@ -84,4 +84,24 @@ mod tests {
             .add_labeled_edge("a", "g", 18.);
         check_path(graph_builder);
     }
+
+    #[test]
+    fn test_non_one_in_out_diff() {
+        let mut graph_builder = GraphBuilder::new();
+        graph_builder
+            .add_labeled_edge("a", "c", 20.)
+            .add_labeled_edge("a", "b", 10.)
+            .add_labeled_edge("b", "e", 10.)
+            .add_labeled_edge("b", "d", 50.)
+            .add_labeled_edge("c", "e", 33.)
+            .add_labeled_edge("c", "d", 20.)
+            .add_labeled_edge("d", "e", 5.)
+            .add_labeled_edge("d", "f", 12.)
+            .add_labeled_edge("e", "a", 12.)
+            .add_labeled_edge("e", "f", 1.)
+            .add_labeled_edge("f", "c", 22.)
+            .add_labeled_edge("g", "f", 2.)
+            .add_labeled_edge("b", "g", 67.);
+        check_path(graph_builder);
+    }
 }

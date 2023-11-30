@@ -139,8 +139,24 @@ impl Graph {
             .enumerate()
         {
             match Graph::out_in_diff(&row, &col) {
-                x if x > 0 => positive_difference_nodes.push(node),
-                x if x < 0 => negative_difference_nodes.push(node),
+                x if x > 0 => {
+                    println!(
+                        "Node {} has a positive difference of {}",
+                        self.node_labels[node], x
+                    );
+                    for _ in 0..x {
+                        positive_difference_nodes.push(node)
+                    }
+                }
+                x if x < 0 => {
+                    println!(
+                        "Node {} has a negative difference of {}",
+                        self.node_labels[node], x
+                    );
+                    for _ in 0..-x {
+                        negative_difference_nodes.push(node)
+                    }
+                }
                 _ => (),
             }
         }

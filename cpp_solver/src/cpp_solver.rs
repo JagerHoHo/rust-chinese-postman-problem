@@ -1,12 +1,13 @@
+mod floyd_warshall;
+mod hierholzer;
+mod hungarian;
+
 use ndarray::Array2;
 
-use crate::graph::Graph;
-mod floyd_warshall;
+use crate::{cpp_solver::hungarian::Matching, graph::Graph};
 use floyd_warshall::FloydWarshallRunner;
-mod hungarian;
-use std::{collections::VecDeque, fmt};
-mod hierholzer;
 use hierholzer::HierholzerRunner;
+use std::{collections::VecDeque, fmt};
 
 pub struct Path {
     pub path: VecDeque<usize>,
@@ -54,7 +55,15 @@ impl CppSolver {
         let shortest_distance_between_nodes = self.floyd_warshall.shortest_distances();
         let imbalanced_nodes_best_match =
             hungarian::best_match(&imbalanced_nodes, shortest_distance_between_nodes);
-        for (from, to) in imbalanced_nodes_best_match {
+        println!("Best match found");
+        for mathching in &imbalanced_nodes_best_match {
+            println!(
+                "Add connection from {} to {}",
+                self.graph.node_labels[mathching.from], self.graph.node_labels[mathching.to]
+            );
+        }
+        println!("Adding edges to the graph according to the best match.");
+        for Matching { from, to } in imbalanced_nodes_best_match {
             for (i, node) in self
                 .floyd_warshall
                 .shortest_path_between(from, to)
@@ -80,38 +89,16 @@ impl CppSolver {
 
 impl Path {
     pub fn new(path: VecDeque<usize>, weight_matrix: &Array2<f64>, labels: &[String]) -> Self {
-        let mut labels = Vec::from(labels);
-        if labels.is_empty() {
-            let mut current_sequence = String::from("a");
-            for _ in 0..weight_matrix.nrows() {
-                labels.push(current_sequence.clone());
-                current_sequence = Self::increment_sequence(&current_sequence);
-            }
-        }
-
         let cost = path
             .iter()
             .zip(path.iter().skip(1))
             .map(|(from, to)| weight_matrix[(*from, *to)])
             .sum();
-        Self { path, cost, labels }
-    }
-
-    fn increment_sequence(s: &str) -> String {
-        let mut chars: Vec<char> = s.chars().collect();
-        let mut carry = 1;
-        for c in chars.iter_mut().rev() {
-            if carry == 0 {
-                break;
-            }
-            let current_value = (*c as u8 - b'a') + carry;
-            *c = ((current_value % 26) + b'a') as char;
-            carry = current_value / 26;
+        Self {
+            path,
+            cost,
+            labels: labels.to_vec(),
         }
-        if carry > 0 {
-            chars.insert(0, ((carry % 26) + b'a') as char);
-        }
-        chars.iter().collect()
     }
 }
 
