@@ -1,4 +1,4 @@
-# Chinese Postman Problem (CPP) or Route Inspection Problem Solution in Rust
+# Chinese Postman Problem Solution in Rust
 
 ## What is it?
 
