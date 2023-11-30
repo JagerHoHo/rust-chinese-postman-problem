@@ -64,16 +64,13 @@ impl CppSolver {
         }
         println!("Adding edges to the graph according to the best match.");
         for Matching { from, to } in imbalanced_nodes_best_match {
-            for (i, node) in self
-                .floyd_warshall
-                .shortest_path_between(from, to)
-                .iter()
-                .enumerate()
-            {
-                if i == 0 {
-                    continue;
-                }
-                let from = self.floyd_warshall.shortest_path_between(from, to)[i - 1];
+            println!(
+                "Connecting {} and {} ",
+                self.graph.node_labels[from], self.graph.node_labels[to]
+            );
+            let shortest_path = self.floyd_warshall.shortest_path_between(from, to);
+            for (i, node) in shortest_path.iter().enumerate().skip(1) {
+                let from = shortest_path[i - 1];
                 let to = *node;
                 self.graph
                     .add_edge(from, to, self.graph.weight_matrix[(from, to)]);
