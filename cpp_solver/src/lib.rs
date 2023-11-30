@@ -7,7 +7,6 @@ pub use graph::GraphBuilder;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use graph::GraphBuilder;
 
     fn check_path(graph_builder: GraphBuilder) {
         let graph = graph_builder.build();

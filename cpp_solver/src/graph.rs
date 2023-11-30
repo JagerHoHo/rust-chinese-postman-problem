@@ -22,14 +22,14 @@ pub struct GraphBuilder {
 }
 
 pub struct Graph {
-    pub(super) weight_matrix: Array2<f64>,
-    pub(super) out_degrees: Array1<usize>,
-    pub(super) edge_count: Array2<usize>,
-    pub(super) node_labels: Vec<String>,
+    pub(crate) weight_matrix: Array2<f64>,
+    pub(crate) out_degrees: Array1<usize>,
+    pub(crate) edge_count: Array2<usize>,
+    pub(crate) node_labels: Vec<String>,
 }
 
 impl ImbalancedNodeSet {
-    pub(super) fn empty(&self) -> bool {
+    pub(crate) fn empty(&self) -> bool {
         self.negative_difference_nodes.is_empty() && self.positive_difference_nodes.is_empty()
     }
 }
@@ -166,7 +166,7 @@ impl Graph {
         }
     }
 
-    pub(super) fn edge_set(&self) -> Vec<Vec<usize>> {
+    pub(crate) fn edge_set(&self) -> Vec<Vec<usize>> {
         let mut edge_set = Vec::new();
         edge_set.resize(self.weight_matrix.nrows(), Vec::new());
         for (from, row) in self.weight_matrix.rows().into_iter().enumerate() {

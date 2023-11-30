@@ -88,7 +88,11 @@ impl CppSolver {
 }
 
 impl Path {
-    pub fn new(path: VecDeque<usize>, weight_matrix: &Array2<f64>, labels: &[String]) -> Self {
+    pub(crate) fn new(
+        path: VecDeque<usize>,
+        weight_matrix: &Array2<f64>,
+        labels: &[String],
+    ) -> Self {
         let cost = path
             .iter()
             .zip(path.iter().skip(1))

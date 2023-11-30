@@ -5,9 +5,9 @@ use pathfinding::{kuhn_munkres::kuhn_munkres_min, prelude::Matrix};
 use crate::graph::ImbalancedNodeSet;
 
 #[derive(Debug)]
-pub(crate) struct Matching {
-    pub(crate) from: usize,
-    pub(crate) to: usize,
+pub(super) struct Matching {
+    pub(super) from: usize,
+    pub(super) to: usize,
 }
 
 pub(super) fn best_match(
