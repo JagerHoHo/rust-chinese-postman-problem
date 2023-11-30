@@ -58,7 +58,7 @@ impl CppSolver {
         println!("Best match found");
         for mathching in &imbalanced_nodes_best_match {
             println!(
-                "Add connection from {} to {}",
+                "A connection will be added from {} to {}",
                 self.graph.node_labels[mathching.from], self.graph.node_labels[mathching.to]
             );
         }
