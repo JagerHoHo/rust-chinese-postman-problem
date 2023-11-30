@@ -19,14 +19,6 @@ pub(super) fn best_match(
         imbalanced_nodes,
         shortest_distance_between_nodes,
     );
-    let weights = Matrix::from_rows(
-        weights
-            .view()
-            .rows()
-            .into_iter()
-            .map(|row| row.into_iter().copied().collect::<Vec<_>>()),
-    )
-    .unwrap();
     let (_, best_match) = kuhn_munkres_min(&weights);
     for (from, to) in imbalanced_nodes.negative_difference_nodes.iter().zip(
         best_match
@@ -41,12 +33,10 @@ pub(super) fn best_match(
 fn shortest_distances_between_imbalanced_nodes(
     imbalanced_nodes: &ImbalancedNodeSet,
     shortest_distance_between_nodes: ArrayView2<f64>,
-) -> Array2<OrderedFloat<f64>> {
-    Array2::from_shape_fn(
-        (
-            imbalanced_nodes.negative_difference_nodes.len(),
-            imbalanced_nodes.positive_difference_nodes.len(),
-        ),
+) -> Matrix<OrderedFloat<f64>> {
+    Matrix::from_fn(
+        imbalanced_nodes.negative_difference_nodes.len(),
+        imbalanced_nodes.positive_difference_nodes.len(),
         |(i, j)| {
             let from = imbalanced_nodes.negative_difference_nodes[i];
             let to = imbalanced_nodes.positive_difference_nodes[j];
