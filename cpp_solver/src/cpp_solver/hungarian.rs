@@ -1,4 +1,4 @@
-use ndarray::{Array2, ArrayView2};
+use ndarray::ArrayView2;
 use ordered_float::OrderedFloat;
 use pathfinding::{kuhn_munkres::kuhn_munkres_min, prelude::Matrix};
 
