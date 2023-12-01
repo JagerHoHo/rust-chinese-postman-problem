@@ -4,8 +4,8 @@ use ndarray::{Array1, Array2, ArrayView1};
 
 #[derive(Debug)]
 pub(crate) struct ImbalancedNodeSet {
-    pub(crate) negative_difference_nodes: Vec<usize>,
-    pub(crate) positive_difference_nodes: Vec<usize>,
+    pub(crate) negative: Vec<usize>,
+    pub(crate) positive: Vec<usize>,
 }
 
 struct Edge {
@@ -30,7 +30,7 @@ pub struct Graph {
 
 impl ImbalancedNodeSet {
     pub(crate) fn empty(&self) -> bool {
-        self.negative_difference_nodes.is_empty() && self.positive_difference_nodes.is_empty()
+        self.negative.is_empty() && self.positive.is_empty()
     }
 }
 
@@ -161,8 +161,8 @@ impl Graph {
             }
         }
         ImbalancedNodeSet {
-            negative_difference_nodes,
-            positive_difference_nodes,
+            negative: negative_difference_nodes,
+            positive: positive_difference_nodes,
         }
     }
 
