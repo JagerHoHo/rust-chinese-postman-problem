@@ -8,12 +8,12 @@ pub use graph::GraphBuilder;
 mod tests {
     use super::*;
 
-    fn check_path(graph_builder: GraphBuilder) {
+    fn check_path(graph_builder: GraphBuilder, cost: f64) {
         let graph = graph_builder.build();
         let mut solver = CppSolver::new(graph);
         match solver.solve() {
             Some(path) => {
-                println!("{}", path);
+                assert_eq!(path.cost, cost)
             }
             None => panic!("No solution found"),
         }
@@ -25,7 +25,7 @@ mod tests {
         for i in 0..5 {
             graph_builder.add_edge(i, (i + 1) % 5, 1.);
         }
-        check_path(graph_builder);
+        check_path(graph_builder, 5.);
     }
 
     #[test]
@@ -43,7 +43,7 @@ mod tests {
             .add_edge(4, 0, 12.)
             .add_edge(4, 5, 1.)
             .add_edge(5, 2, 22.);
-        check_path(graph_builder);
+        check_path(graph_builder, 276.);
     }
 
     #[test]
@@ -61,7 +61,7 @@ mod tests {
             .add_labeled_edge("e", "a", 12.)
             .add_labeled_edge("e", "f", 1.)
             .add_labeled_edge("f", "c", 22.);
-        check_path(graph_builder);
+        check_path(graph_builder, 276.);
     }
 
     #[test]
@@ -81,7 +81,7 @@ mod tests {
             .add_labeled_edge("f", "c", 22.)
             .add_labeled_edge("g", "c", 88.)
             .add_labeled_edge("a", "g", 18.);
-        check_path(graph_builder);
+        check_path(graph_builder, 419.);
     }
 
     #[test]
@@ -101,6 +101,6 @@ mod tests {
             .add_labeled_edge("f", "c", 22.)
             .add_labeled_edge("g", "f", 2.)
             .add_labeled_edge("b", "g", 67.);
-        check_path(graph_builder);
+        check_path(graph_builder, 414.);
     }
 }
