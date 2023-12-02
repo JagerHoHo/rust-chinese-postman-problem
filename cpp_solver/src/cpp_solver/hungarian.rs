@@ -14,20 +14,17 @@ pub(super) fn best_match(
     imbalanced_nodes: &ImbalancedNodeSet,
     shortest_distance_between_nodes: ArrayView2<f64>,
 ) -> Vec<Matching> {
-    let mut matching = Vec::new();
     let weights = shortest_distances_between_imbalanced_nodes(
         imbalanced_nodes,
         shortest_distance_between_nodes,
     );
     let (_, best_match) = kuhn_munkres_min(&weights);
-    for (&from, to) in imbalanced_nodes
+    imbalanced_nodes
         .negative
         .iter()
         .zip(best_match.iter().map(|&x| imbalanced_nodes.positive[x]))
-    {
-        matching.push(Matching { from, to });
-    }
-    matching
+        .map(|(&from, to)| Matching { from, to })
+        .collect()
 }
 
 fn shortest_distances_between_imbalanced_nodes(
