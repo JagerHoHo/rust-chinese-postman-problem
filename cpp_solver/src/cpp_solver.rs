@@ -105,18 +105,14 @@ impl Path {
 
 impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let path = &self.labels[self.path[0]];
         let path = self
             .path
             .iter()
-            .enumerate()
-            .map(|(i, x)| {
-                if i == self.path.len() - 1 {
-                    self.labels[*x].to_owned()
-                } else {
-                    format!("{}->", self.labels[*x])
-                }
-            })
-            .collect::<String>();
+            .skip(1)
+            .fold(path.to_string(), |path, &next| {
+                path + "->" + &self.labels[next]
+            });
         write!(f, "Path: {}, Cost: {}", path, self.cost)
     }
 }
