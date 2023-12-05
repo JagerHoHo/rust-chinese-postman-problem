@@ -42,8 +42,8 @@ impl FloydWarshallRunner {
         self.shortest_distances.view()
     }
 
-    pub(super) fn graph_has_negative_cycle(&self) -> bool {
-        self.have_negative_cycle
+    pub(super) fn graph_has_no_negative_cycle(&self) -> bool {
+        !self.have_negative_cycle
     }
 
     pub(super) fn graph_is_strongly_connected(&self) -> bool {
