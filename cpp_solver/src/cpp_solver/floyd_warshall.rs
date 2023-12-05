@@ -1,5 +1,6 @@
 use ndarray::{Array2, ArrayView2};
 
+/// Represents a runner for the Floyd-Warshall algorithm.
 pub(super) struct FloydWarshallRunner {
     n_nodes: usize,
     shortest_distances: Array2<f64>,
@@ -27,6 +28,16 @@ impl FloydWarshallRunner {
         runner
     }
 
+    /// Calculates the shortest path between two nodes in the graph.
+    ///
+    /// # Arguments
+    ///
+    /// * `start` - The starting node index.
+    /// * `end` - The ending node index.
+    ///
+    /// # Returns
+    ///
+    /// A vector containing the nodes in the shortest path from `start` to `end`.
     pub(super) fn shortest_path_between(&self, start: usize, end: usize) -> Vec<usize> {
         let mut path = Vec::new();
         let mut current_node = start;
@@ -38,18 +49,31 @@ impl FloydWarshallRunner {
         path
     }
 
+    /// Returns a view of the shortest distances matrix.
     pub(super) fn shortest_distances(&self) -> ArrayView2<f64> {
         self.shortest_distances.view()
     }
 
+    /// Checks if the graph has no negative cycle.
+    ///
+    /// Returns `true` if the graph has no negative cycle, `false` otherwise.
     pub(super) fn graph_has_no_negative_cycle(&self) -> bool {
         !self.have_negative_cycle
     }
 
+    /// Checks if the graph is strongly connected.
+    ///
+    /// Returns `true` if the graph is strongly connected, `false` otherwise.
     pub(super) fn graph_is_strongly_connected(&self) -> bool {
         self.shortest_distances.iter().all(|x| *x != f64::INFINITY)
     }
 
+    /// Finds the shortest distances between all pairs of nodes using the Floyd-Warshall algorithm.
+    ///
+    /// This method updates the `shortest_distances` matrix and the `next` matrix based on the
+    /// distances calculated using the Floyd-Warshall algorithm. The `shortest_distances` matrix
+    /// stores the shortest distances between each pair of nodes, while the `next` matrix stores
+    /// the next node in the shortest path from node `i` to node `j`.
     fn find_shortest_distances(&mut self) {
         for k in 0..self.n_nodes {
             for i in 0..self.n_nodes {
@@ -65,6 +89,13 @@ impl FloydWarshallRunner {
         }
     }
 
+    /// Finds a negative cycle in the graph using the Floyd-Warshall algorithm.
+    ///
+    /// This method iterates over all nodes in the graph and checks if there is a negative cycle
+    /// by comparing the shortest distance between nodes `i` and `j` with the distance passing through
+    /// an intermediate node `k`. If a shorter distance is found, it indicates the presence of a negative cycle.
+    /// In such cases, the shortest distance between `i` and `j` is set to negative infinity and the next node
+    /// in the shortest path is set to `usize::MAX`.
     fn find_negative_cycle(&mut self) {
         for k in 0..self.n_nodes {
             for i in 0..self.n_nodes {

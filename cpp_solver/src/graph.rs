@@ -2,18 +2,21 @@ use std::collections::{HashMap, HashSet};
 
 use ndarray::{Array1, Array2, ArrayView1};
 
+/// Represents a set of imbalanced nodes, with negative and positive imbalances.
 #[derive(Debug)]
 pub(crate) struct ImbalancedNodeSet {
     pub(crate) negative: Vec<usize>,
     pub(crate) positive: Vec<usize>,
 }
 
+/// Represents an edge in the graph, with a source node, target node, and weight.
 struct Edge {
     from: usize,
     to: usize,
     weight: f64,
 }
 
+/// Builder for constructing a graph.
 pub struct GraphBuilder {
     edges: Vec<Edge>,
     max_node: usize,
@@ -21,6 +24,7 @@ pub struct GraphBuilder {
     used_labels: HashSet<String>,
 }
 
+/// Represents a graph, with weight matrix, out degrees, edge count, and node labels.
 pub struct Graph {
     pub(crate) weight_matrix: Array2<f64>,
     pub(crate) out_degrees: Array1<usize>,
@@ -29,12 +33,14 @@ pub struct Graph {
 }
 
 impl ImbalancedNodeSet {
+    /// Checks if the set of imbalanced nodes is empty.
     pub(crate) fn empty(&self) -> bool {
         self.negative.is_empty() && self.positive.is_empty()
     }
 }
 
 impl GraphBuilder {
+    /// Creates a new instance of `GraphBuilder`.
     pub fn new() -> Self {
         Self {
             edges: Vec::new(),
@@ -44,12 +50,14 @@ impl GraphBuilder {
         }
     }
 
+    /// Adds an edge to the graph builder.
     pub fn add_edge(&mut self, from: usize, to: usize, weight: f64) -> &mut Self {
         self.max_node = self.max_node.max(from).max(to);
         self.edges.push(Edge { from, to, weight });
         self
     }
 
+    /// Adds a labeled edge to the graph builder.
     pub fn add_labeled_edge(&mut self, from_label: &str, to_label: &str, weight: f64) -> &mut Self {
         if !self.used_labels.contains(from_label) {
             self.node_labels
@@ -66,6 +74,7 @@ impl GraphBuilder {
         self.add_edge(from, to, weight)
     }
 
+    /// Builds the graph from the added edges.
     pub fn build(self) -> Graph {
         let mut weight_matrix =
             Array2::from_elem((self.max_node + 1, self.max_node + 1), f64::INFINITY);
@@ -94,6 +103,7 @@ impl Default for GraphBuilder {
 }
 
 impl Graph {
+    /// Creates a graph from a weight matrix.
     pub fn from_weight_matrix(weight_matrix: Array2<f64>) -> Self {
         Self {
             out_degrees: weight_matrix
@@ -107,6 +117,7 @@ impl Graph {
         }
     }
 
+    /// Relabels the nodes in the graph with the given labels.
     pub(crate) fn relabel(&mut self, node_labels: Option<Vec<String>>) {
         self.node_labels = match node_labels {
             Some(node_labels) => node_labels,
@@ -114,10 +125,12 @@ impl Graph {
         }
     }
 
+    /// Returns the out degrees of the nodes in the graph.
     pub(crate) fn out_degrees(&self) -> Array1<usize> {
         self.out_degrees.clone()
     }
 
+    /// Adds an edge to the graph.
     pub(crate) fn add_edge(&mut self, from: usize, to: usize, weight: f64) {
         println!(
             "Edge added from {} to {}",
@@ -128,6 +141,7 @@ impl Graph {
         self.edge_count[[from, to]] += 1;
     }
 
+    /// Returns the set of imbalanced nodes in the graph.
     pub(crate) fn imbalanced_nodes(&self) -> ImbalancedNodeSet {
         let mut negative_difference_nodes = Vec::new();
         let mut positive_difference_nodes = Vec::new();
@@ -166,6 +180,7 @@ impl Graph {
         }
     }
 
+    /// Returns the edge set of the graph.
     pub(crate) fn edge_set(&self) -> Vec<Vec<usize>> {
         let mut edge_set = Vec::new();
         edge_set.resize(self.weight_matrix.nrows(), Vec::new());
@@ -181,6 +196,7 @@ impl Graph {
         edge_set
     }
 
+    /// Returns the out in degree difference of a node.
     fn out_in_diff(row: &ArrayView1<f64>, col: &ArrayView1<f64>) -> isize {
         let out_degree = row.iter().filter(|x| **x != f64::INFINITY).count();
         let in_degree = col.iter().filter(|x| **x != f64::INFINITY).count();

@@ -1,5 +1,10 @@
+/// Module for the Floyd-Warshall algorithm implementation.
 mod floyd_warshall;
+
+/// Module for the Hierholzer algorithm implementation.
 mod hierholzer;
+
+/// Module for the Hungarian algorithm implementation.
 mod hungarian;
 
 use ndarray::Array2;
@@ -9,12 +14,14 @@ use floyd_warshall::FloydWarshallRunner;
 use hierholzer::HierholzerRunner;
 use std::{collections::VecDeque, fmt};
 
+/// Represents a path in the graph.
 pub struct Path {
     pub path: VecDeque<usize>,
     pub cost: f64,
     labels: Vec<String>,
 }
 
+/// Solver for the Chinese Postman Problem.
 pub struct CppSolver {
     graph: Graph,
     floyd_warshall: FloydWarshallRunner,
@@ -22,6 +29,11 @@ pub struct CppSolver {
 }
 
 impl CppSolver {
+    /// Creates a new instance of the solver.
+    ///
+    /// # Arguments
+    ///
+    /// * `graph` - The graph to solve the problem on.
     pub fn new(graph: Graph) -> Self {
         Self {
             floyd_warshall: FloydWarshallRunner::new(graph.weight_matrix.clone()),
@@ -30,12 +42,17 @@ impl CppSolver {
         }
     }
 
+    /// Solves the Chinese Postman Problem and returns the optimal path.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing the optimal path if the graph is solvable, or `None` otherwise.
     pub fn solve(&mut self) -> Option<Path> {
         if !self.solvable() {
-            println!("Graph is not solvable");
+            println!("The graph is not solvable");
             return None;
         }
-        println!("Graph is solvable");
+        println!("The graph is solvable");
         self.balance_node();
         self.hierholzer.run(&self.graph);
         Some(Path::new(
@@ -45,6 +62,7 @@ impl CppSolver {
         ))
     }
 
+    /// Balances the imbalanced nodes in the graph using the Hungarian algorithm.
     fn balance_node(&mut self) {
         let imbalanced_nodes = self.graph.imbalanced_nodes();
         if imbalanced_nodes.empty() {
@@ -56,10 +74,10 @@ impl CppSolver {
         let imbalanced_nodes_best_match =
             hungarian::best_match(&imbalanced_nodes, shortest_distance_between_nodes);
         println!("Best match found");
-        for mathching in &imbalanced_nodes_best_match {
+        for matching in &imbalanced_nodes_best_match {
             println!(
                 "A connection will be added from {} to {}",
-                self.graph.node_labels[mathching.from], self.graph.node_labels[mathching.to]
+                self.graph.node_labels[matching.from], self.graph.node_labels[matching.to]
             );
         }
         println!("Adding edges to the graph according to the best match.");
@@ -78,6 +96,11 @@ impl CppSolver {
         }
     }
 
+    /// Checks if the graph is solvable.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the graph is solvable, `false` otherwise.
     fn solvable(&self) -> bool {
         let connected = self.floyd_warshall.graph_is_strongly_connected();
         let has_no_negative_cycle = self.floyd_warshall.graph_has_no_negative_cycle();
@@ -94,6 +117,13 @@ impl CppSolver {
 }
 
 impl Path {
+    /// Creates a new instance of `Path`.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path as a sequence of node indices.
+    /// * `weight_matrix` - The weight matrix of the graph.
+    /// * `labels` - The labels of the nodes in the graph.
     pub(crate) fn new(
         path: VecDeque<usize>,
         weight_matrix: &Array2<f64>,
