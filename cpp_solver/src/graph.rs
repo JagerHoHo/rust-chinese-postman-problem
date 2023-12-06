@@ -27,9 +27,9 @@ pub struct GraphBuilder {
 /// Represents a graph, with weight matrix, out degrees, edge count, and node labels.
 pub struct Graph {
     pub(crate) weight_matrix: Array2<f64>,
-    pub(crate) out_degrees: Array1<usize>,
-    pub(crate) edge_count: Array2<usize>,
     pub(crate) node_labels: Vec<String>,
+    out_degrees: Array1<usize>,
+    edge_count: Array2<usize>,
 }
 
 impl ImbalancedNodeSet {
