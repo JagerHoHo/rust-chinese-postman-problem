@@ -105,8 +105,8 @@ impl CppSolver {
         let connected = self.floyd_warshall.graph_is_strongly_connected();
         let has_no_negative_cycle = self.floyd_warshall.graph_has_no_negative_cycle();
         println!(
-            "The graph is {} strongly connected",
-            if connected { "not" } else { "" }
+            "The graph is {}strongly connected",
+            if connected { "" } else { "not " }
         );
         println!(
             "The graph has {} negative cycle",
