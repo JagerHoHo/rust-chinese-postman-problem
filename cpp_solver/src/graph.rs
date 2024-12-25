@@ -26,15 +26,15 @@ pub struct GraphBuilder {
 
 /// Represents a graph, with weight matrix, out degrees, edge count, and node labels.
 pub struct Graph {
-    pub(crate) weight_matrix: Array2<f64>,
-    pub(crate) node_labels: Vec<String>,
-    edge_counts: HashMap<(usize, usize), usize>, // More efficient edge storage
+    weight_matrix: Array2<f64>,
+    node_labels: Vec<String>,
+    edge_counts: HashMap<(usize, usize), usize>,
     out_degrees: Array1<usize>,
 }
 
 impl ImbalancedNodeSet {
     /// Checks if the set of imbalanced nodes is empty.
-    pub(crate) fn empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.negative.is_empty() && self.positive.is_empty()
     }
 }
@@ -232,6 +232,11 @@ impl Graph {
     pub fn weight_matrix(&self) -> &Array2<f64> {
         &self.weight_matrix
     }
+
+    /// Returns the node labels (for debugging or advanced usage).
+    pub fn node_labels(&self) -> &[String] {
+        &self.node_labels
+    }
 }
 
 /// Test that an empty graph is correctly initialized.
@@ -272,5 +277,20 @@ fn test_out_in_diff() {
     builder.add_edge(0, 1, 1.0).add_edge(1, 0, 1.0);
     let graph = builder.build();
     let imbalanced_nodes = graph.imbalanced_nodes();
-    assert!(imbalanced_nodes.empty());
+    assert!(imbalanced_nodes.is_empty());
+}
+
+#[test]
+fn test_imbalanced_node_set_is_empty() {
+    let empty_set = ImbalancedNodeSet {
+        negative: Vec::new(),
+        positive: Vec::new(),
+    };
+    assert!(empty_set.is_empty());
+
+    let non_empty_set = ImbalancedNodeSet {
+        negative: vec![1],
+        positive: Vec::new(),
+    };
+    assert!(!non_empty_set.is_empty());
 }
