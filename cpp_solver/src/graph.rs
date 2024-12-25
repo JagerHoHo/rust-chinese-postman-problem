@@ -28,8 +28,8 @@ pub struct GraphBuilder {
 pub struct Graph {
     pub(crate) weight_matrix: Array2<f64>,
     pub(crate) node_labels: Vec<String>,
+    edge_counts: HashMap<(usize, usize), usize>, // More efficient edge storage
     out_degrees: Array1<usize>,
-    edge_count: Array2<usize>,
 }
 
 impl ImbalancedNodeSet {
@@ -50,52 +50,61 @@ impl GraphBuilder {
         }
     }
 
-    /// Adds an edge to the graph builder.
+    /// Adds an edge to the graph using numeric indices.
     pub fn add_edge(&mut self, from: usize, to: usize, weight: f64) -> &mut Self {
         self.max_node = self.max_node.max(from).max(to);
         self.edges.push(Edge { from, to, weight });
         self
     }
 
-    /// Adds a labeled edge to the graph builder.
+    /// Adds an edge to the graph using labeled nodes.
     pub fn add_labeled_edge(&mut self, from_label: &str, to_label: &str, weight: f64) -> &mut Self {
-        if !self.used_labels.contains(from_label) {
-            self.node_labels
-                .insert(from_label.to_string(), self.used_labels.len());
-            self.used_labels.insert(from_label.to_string());
-        }
-        if !self.used_labels.contains(to_label) {
-            self.node_labels
-                .insert(to_label.to_string(), self.used_labels.len());
-            self.used_labels.insert(to_label.to_string());
-        }
-        let from = self.node_labels[from_label];
-        let to = self.node_labels[to_label];
+        let from = self.get_or_insert_label(from_label);
+        let to = self.get_or_insert_label(to_label);
         self.add_edge(from, to, weight)
     }
 
     /// Builds the graph from the added edges.
     pub fn build(self) -> Graph {
-        let mut weight_matrix = if self.max_node > 0 {
-            Array2::from_elem((self.max_node + 1, self.max_node + 1), f64::INFINITY)
+        let n_nodes = if self.max_node > 0 {
+            self.max_node + 1
         } else {
-            Array2::from_elem((0, 0), f64::INFINITY)
+            0
         };
-        for edge in self.edges {
-            weight_matrix[[edge.from, edge.to]] = edge.weight;
+
+        // Create a weight matrix initialized to infinity
+        let mut weight_matrix = Array2::from_elem((n_nodes, n_nodes), f64::INFINITY);
+
+        // Populate the weight matrix with edges
+        for Edge { from, to, weight } in self.edges {
+            weight_matrix[[from, to]] = weight;
         }
-        let mut node_labels = Vec::new();
-        node_labels.resize(self.node_labels.len(), String::new());
-        for (label, node) in self.node_labels {
-            node_labels[node] = label;
+
+        // Convert node labels map to a sorted vector
+        let mut node_labels = vec![String::new(); self.node_labels.len()];
+        for (label, &index) in &self.node_labels {
+            node_labels[index] = label.clone();
         }
-        let mut graph = Graph::from_weight_matrix(weight_matrix);
-        graph.relabel(if node_labels.is_empty() {
-            None
-        } else {
+        let node_labels = if !node_labels.is_empty() {
             Some(node_labels)
-        });
-        graph
+        } else {
+            None
+        };
+
+        // Build the graph using from_weight_matrix
+        Graph::from_weight_matrix(weight_matrix, node_labels)
+    }
+
+    /// Retrieves or inserts a label into the `node_labels` map.
+    fn get_or_insert_label(&mut self, label: &str) -> usize {
+        if let Some(&index) = self.node_labels.get(label) {
+            index
+        } else {
+            let index = self.node_labels.len();
+            self.node_labels.insert(label.to_string(), index);
+            self.used_labels.insert(label.to_string());
+            index
+        }
     }
 }
 
@@ -106,48 +115,84 @@ impl Default for GraphBuilder {
 }
 
 impl Graph {
-    /// Creates a graph from a weight matrix.
-    pub fn from_weight_matrix(weight_matrix: Array2<f64>) -> Self {
+    /// Constructs a new Graph from a weight matrix.
+    pub fn new(weight_matrix: Array2<f64>, node_labels: Vec<String>) -> Self {
+        let out_degrees = weight_matrix
+            .rows()
+            .into_iter()
+            .map(|row| row.iter().filter(|&&x| x != f64::INFINITY).count())
+            .collect();
+        let edge_counts = Self::compute_edge_counts(&weight_matrix);
         Self {
-            out_degrees: weight_matrix
-                .rows()
-                .into_iter()
-                .map(|row| row.iter().filter(|x| **x != f64::INFINITY).count())
-                .collect(),
-            edge_count: weight_matrix.mapv(|x| if x != f64::INFINITY { 1 } else { 0 }),
-            node_labels: Vec::new(),
             weight_matrix,
+            node_labels,
+            edge_counts,
+            out_degrees,
         }
     }
 
-    /// Relabels the nodes in the graph with the given labels.
-    pub(crate) fn relabel(&mut self, node_labels: Option<Vec<String>>) {
-        self.node_labels = match node_labels {
-            Some(node_labels) => node_labels,
-            None => Vec::from_iter((0..self.weight_matrix.nrows()).map(|x| x.to_string())),
+    pub fn from_weight_matrix(
+        weight_matrix: Array2<f64>,
+        node_labels: Option<Vec<String>>,
+    ) -> Self {
+        let out_degrees = weight_matrix
+            .rows()
+            .into_iter()
+            .map(|row| row.iter().filter(|&&x| x != f64::INFINITY).count())
+            .collect();
+        let edge_counts = Self::compute_edge_counts(&weight_matrix);
+
+        // If no labels are provided, generate default numeric labels
+        let labels = node_labels
+            .unwrap_or_else(|| (0..weight_matrix.nrows()).map(|i| i.to_string()).collect());
+
+        Self {
+            weight_matrix,
+            node_labels: labels,
+            edge_counts,
+            out_degrees,
         }
     }
 
-    /// Returns the out degrees of the nodes in the graph.
-    pub(crate) fn out_degrees(&self) -> Array1<usize> {
+    /// Computes edge counts from a weight matrix.
+    fn compute_edge_counts(weight_matrix: &Array2<f64>) -> HashMap<(usize, usize), usize> {
+        let mut counts = HashMap::new();
+        for (i, row) in weight_matrix.rows().into_iter().enumerate() {
+            for (j, &weight) in row.iter().enumerate() {
+                if weight != f64::INFINITY {
+                    *counts.entry((i, j)).or_insert(0) += 1;
+                }
+            }
+        }
+        counts
+    }
+
+    /// Adds an edge to the graph with a weight.
+    pub fn add_edge(&mut self, from: usize, to: usize, weight: f64) {
+        self.weight_matrix[[from, to]] = weight;
+        self.out_degrees[from] += 1;
+        *self.edge_counts.entry((from, to)).or_insert(0) += 1;
+    }
+
+    /// Returns the out-degrees of the nodes.
+    pub fn out_degrees(&self) -> Array1<usize> {
         self.out_degrees.clone()
     }
 
-    /// Adds an edge to the graph.
-    pub(crate) fn add_edge(&mut self, from: usize, to: usize, weight: f64) {
-        println!(
-            "Edge added from {} to {}",
-            self.node_labels[from], self.node_labels[to]
-        );
-        self.weight_matrix[[from, to]] = weight;
-        self.out_degrees[from] += 1;
-        self.edge_count[[from, to]] += 1;
+    /// Retrieves the edge set in a sparse representation.
+    pub fn edge_set(&self) -> Vec<Vec<usize>> {
+        let mut edge_set = vec![Vec::new(); self.weight_matrix.nrows()];
+        for (&(from, to), &count) in &self.edge_counts {
+            edge_set[from].extend(vec![to; count]);
+        }
+        edge_set
     }
 
     /// Returns the set of imbalanced nodes in the graph.
     pub(crate) fn imbalanced_nodes(&self) -> ImbalancedNodeSet {
         let mut negative_difference_nodes = Vec::new();
         let mut positive_difference_nodes = Vec::new();
+
         for (node, (row, col)) in self
             .weight_matrix
             .rows()
@@ -156,24 +201,8 @@ impl Graph {
             .enumerate()
         {
             match Graph::out_in_diff(&row, &col) {
-                x if x > 0 => {
-                    println!(
-                        "Node {} has a positive difference of {}",
-                        self.node_labels[node], x
-                    );
-                    for _ in 0..x {
-                        positive_difference_nodes.push(node)
-                    }
-                }
-                x if x < 0 => {
-                    println!(
-                        "Node {} has a negative difference of {}",
-                        self.node_labels[node], x
-                    );
-                    for _ in 0..-x {
-                        negative_difference_nodes.push(node)
-                    }
-                }
+                x if x > 0 => positive_difference_nodes.extend(vec![node; x as usize]),
+                x if x < 0 => negative_difference_nodes.extend(vec![node; (-x) as usize]),
                 _ => (),
             }
         }
@@ -183,27 +212,25 @@ impl Graph {
         }
     }
 
-    /// Returns the edge set of the graph.
-    pub(crate) fn edge_set(&self) -> Vec<Vec<usize>> {
-        let mut edge_set = Vec::new();
-        edge_set.resize(self.weight_matrix.nrows(), Vec::new());
-        for (from, row) in self.weight_matrix.rows().into_iter().enumerate() {
-            for (to, weight) in row.iter().enumerate() {
-                if *weight != f64::INFINITY {
-                    for _ in 0..self.edge_count[(from, to)] {
-                        edge_set[from].push(to);
-                    }
-                }
-            }
-        }
-        edge_set
+    /// Calculates the out-in degree difference of a node.
+    fn out_in_diff(row: &ArrayView1<f64>, col: &ArrayView1<f64>) -> isize {
+        let out_degree = row.iter().filter(|&&x| x != f64::INFINITY).count();
+        let in_degree = col.iter().filter(|&&x| x != f64::INFINITY).count();
+        out_degree as isize - in_degree as isize
     }
 
-    /// Returns the out in degree difference of a node.
-    fn out_in_diff(row: &ArrayView1<f64>, col: &ArrayView1<f64>) -> isize {
-        let out_degree = row.iter().filter(|x| **x != f64::INFINITY).count();
-        let in_degree = col.iter().filter(|x| **x != f64::INFINITY).count();
-        out_degree as isize - in_degree as isize
+    /// Relabels the nodes in the graph with the given labels.
+    pub fn relabel(&mut self, node_labels: Option<Vec<String>>) {
+        self.node_labels = node_labels.unwrap_or_else(|| {
+            (0..self.weight_matrix.nrows())
+                .map(|i| i.to_string())
+                .collect()
+        });
+    }
+
+    /// Returns the weight matrix (for debugging or advanced usage).
+    pub fn weight_matrix(&self) -> &Array2<f64> {
+        &self.weight_matrix
     }
 }
 
