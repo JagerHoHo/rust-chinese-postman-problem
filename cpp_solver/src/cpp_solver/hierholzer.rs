@@ -1,7 +1,5 @@
 use std::collections::VecDeque;
 
-use ndarray::Array1;
-
 use super::Graph;
 
 pub(super) struct HierholzerRunner {
@@ -9,34 +7,66 @@ pub(super) struct HierholzerRunner {
 }
 
 impl HierholzerRunner {
-    pub(super) fn new() -> Self {
+    /// Creates a new instance of `HierholzerRunner`.
+    pub fn new() -> Self {
         Self {
             path: VecDeque::new(),
         }
     }
 
-    pub(super) fn run(&mut self, graph: &Graph) {
-        let mut out_degrees = graph.out_degrees();
-        let mut edge_set = graph.edge_set();
-        self.dfs(0, &mut edge_set, &mut out_degrees);
+    /// Runs the algorithm to find an Eulerian path or circuit.
+    ///
+    /// # Arguments
+    ///
+    /// * `graph` - A reference to the graph. The graph must be Eulerian.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the path is found, or an error message if the graph is not Eulerian.
+    pub fn run(&mut self, graph: &Graph) {
+        if !Self::is_eulerian(graph) {
+            panic!("The graph is not Eulerian.");
+        }
+
+        let mut edge_set = graph.edge_set(); // Clone edge set
+        let mut out_degrees = graph.out_degrees().to_vec(); // Clone out-degrees
+
+        self.find_path(0, &mut edge_set, &mut out_degrees);
     }
 
-    pub(super) fn path(&self) -> VecDeque<usize> {
+    /// Validates if a graph is Eulerian.
+    fn is_eulerian(graph: &Graph) -> bool {
+        graph
+            .out_degrees()
+            .iter()
+            .zip(graph.edge_set().iter())
+            .all(|(out, edges)| edges.len() == *out)
+    }
+
+    /// Retrieves the Eulerian path or circuit.
+    pub fn path(&self) -> VecDeque<usize> {
         self.path.clone()
     }
 
-    fn dfs(
+    /// Finds the Eulerian path or circuit using an iterative DFS approach.
+    fn find_path(
         &mut self,
-        node: usize,
-        edge_set: &mut Vec<Vec<usize>>,
-        out_degrees: &mut Array1<usize>,
+        start_node: usize,
+        edge_set: &mut [Vec<usize>],
+        out_degrees: &mut [usize],
     ) {
-        while out_degrees[node] != 0 {
-            out_degrees[node] -= 1;
-            let next_edge = edge_set[node][out_degrees[node]];
-            self.dfs(next_edge, edge_set, out_degrees);
+        let mut stack = Vec::new();
+        stack.push(start_node);
+
+        while let Some(node) = stack.last() {
+            if out_degrees[*node] > 0 {
+                out_degrees[*node] -= 1;
+                let next_node = edge_set[*node].pop().unwrap();
+                stack.push(next_node);
+            } else {
+                self.path.push_front(stack.pop().unwrap());
+            }
         }
-        self.path.push_front(node);
     }
 }
 

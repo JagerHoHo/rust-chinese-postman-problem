@@ -36,7 +36,7 @@ impl CppSolver {
     /// * `graph` - The graph to solve the problem on.
     pub fn new(graph: Graph) -> Self {
         Self {
-            floyd_warshall: FloydWarshallRunner::new(graph.weight_matrix.clone()),
+            floyd_warshall: FloydWarshallRunner::new(graph.weight_matrix().clone()),
             hierholzer: HierholzerRunner::new(),
             graph,
         }
@@ -49,51 +49,19 @@ impl CppSolver {
     /// An `Option` containing the optimal path if the graph is solvable, or `None` otherwise.
     pub fn solve(&mut self) -> Option<Path> {
         if !self.solvable() {
-            println!("The graph is not solvable");
+            println!("The graph is not solvable.");
             return None;
         }
-        println!("The graph is solvable");
+        println!("The graph is solvable. Proceeding with the solution.");
+
         self.balance_node();
         self.hierholzer.run(&self.graph);
+
         Some(Path::new(
             self.hierholzer.path(),
-            &self.graph.weight_matrix,
-            &self.graph.node_labels,
+            self.graph.weight_matrix(),
+            self.graph.node_labels(),
         ))
-    }
-
-    /// Balances the imbalanced nodes in the graph using the Hungarian algorithm.
-    fn balance_node(&mut self) {
-        let imbalanced_nodes = self.graph.imbalanced_nodes();
-        if imbalanced_nodes.empty() {
-            println!("The graph is balanced");
-            return;
-        }
-        println!("Imbalanced nodes found, using the Hungarian algorithm to find the best match.");
-        let shortest_distance_between_nodes = self.floyd_warshall.shortest_distances();
-        let imbalanced_nodes_best_match =
-            hungarian::best_match(&imbalanced_nodes, shortest_distance_between_nodes);
-        println!("Best match found");
-        for matching in &imbalanced_nodes_best_match {
-            println!(
-                "A connection will be added from {} to {}",
-                self.graph.node_labels[matching.from], self.graph.node_labels[matching.to]
-            );
-        }
-        println!("Adding edges to the graph according to the best match.");
-        for Matching { from, to } in imbalanced_nodes_best_match {
-            println!(
-                "Connecting {} and {} ",
-                self.graph.node_labels[from], self.graph.node_labels[to]
-            );
-            let shortest_path = self.floyd_warshall.shortest_path_between(from, to);
-            for (i, node) in shortest_path.iter().enumerate().skip(1) {
-                let from = shortest_path[i - 1];
-                let to = *node;
-                self.graph
-                    .add_edge(from, to, self.graph.weight_matrix[(from, to)]);
-            }
-        }
     }
 
     /// Checks if the graph is solvable.
@@ -104,15 +72,40 @@ impl CppSolver {
     fn solvable(&self) -> bool {
         let connected = self.floyd_warshall.graph_is_strongly_connected();
         let has_no_negative_cycle = self.floyd_warshall.graph_has_no_negative_cycle();
+
         println!(
-            "The graph is {}strongly connected",
+            "The graph is {}strongly connected.",
             if connected { "" } else { "not " }
         );
         println!(
-            "The graph has {} negative cycle",
+            "The graph has {} negative cycles.",
             if has_no_negative_cycle { "no" } else { "" }
         );
+
         connected && has_no_negative_cycle
+    }
+
+    /// Balances the imbalanced nodes in the graph using the Hungarian algorithm.
+    fn balance_node(&mut self) {
+        let imbalanced_nodes = self.graph.imbalanced_nodes();
+        if imbalanced_nodes.is_empty() {
+            println!("The graph is already balanced.");
+            return;
+        }
+
+        println!("Balancing imbalanced nodes using the Hungarian algorithm.");
+        let shortest_distance_between_nodes = self.floyd_warshall.shortest_distances();
+        let best_match = hungarian::best_match(&imbalanced_nodes, shortest_distance_between_nodes);
+
+        for Matching { from, to } in best_match {
+            let path = self.floyd_warshall.shortest_path_between(from, to);
+
+            for (i, &node) in path.iter().enumerate().skip(1) {
+                let prev = path[i - 1];
+                self.graph
+                    .add_edge(prev, node, self.graph.weight_matrix()[[prev, node]]);
+            }
+        }
     }
 }
 
