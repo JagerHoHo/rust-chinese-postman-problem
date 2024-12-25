@@ -174,6 +174,16 @@ impl Graph {
         *self.edge_counts.entry((from, to)).or_insert(0) += 1;
     }
 
+    /// Returns the in-degrees of the nodes.
+    pub fn in_degrees(&self) -> Array1<usize> {
+        self.weight_matrix
+            .t()
+            .rows()
+            .into_iter()
+            .map(|row| row.iter().filter(|&&x| x != f64::INFINITY).count())
+            .collect()
+    }
+
     /// Returns the out-degrees of the nodes.
     pub fn out_degrees(&self) -> Array1<usize> {
         self.out_degrees.clone()
