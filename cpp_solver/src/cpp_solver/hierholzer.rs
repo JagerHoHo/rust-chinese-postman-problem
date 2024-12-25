@@ -39,3 +39,18 @@ impl HierholzerRunner {
         self.path.push_front(node);
     }
 }
+
+/// Test that Hierholzer's algorithm finds a simple cycle correctly.
+#[test]
+fn test_hierholzer_simple_cycle() {
+    use crate::GraphBuilder;
+    let mut builder = GraphBuilder::new();
+    builder.add_edge(0, 1, 1.0).add_edge(1, 0, 1.0);
+    let graph = builder.build();
+    let mut runner = HierholzerRunner::new();
+    runner.run(&graph);
+    assert_eq!(
+        runner.path().iter().cloned().collect::<Vec<_>>(),
+        vec![0, 1, 0]
+    );
+}

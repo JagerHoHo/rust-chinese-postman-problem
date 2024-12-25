@@ -155,3 +155,62 @@ impl fmt::Display for Path {
         write!(f, "Path: {}, Cost: {}", path, self.cost)
     }
 }
+
+/// Test that the solver correctly identifies an unsolvable graph.
+#[test]
+fn test_solver_unsolvable_graph() {
+    use crate::GraphBuilder;
+    let mut builder = GraphBuilder::new();
+    builder.add_edge(0, 1, 10.0).add_edge(1, 2, -20.0);
+    let graph = builder.build();
+    let mut solver = CppSolver::new(graph);
+    assert!(solver.solve().is_none());
+}
+
+/// Test that the solver correctly solves a simple, balanced graph.
+#[test]
+fn test_solver_simple_graph() {
+    use crate::GraphBuilder;
+    let mut builder = GraphBuilder::new();
+    builder.add_edge(0, 1, 1.0).add_edge(1, 0, 1.0);
+    let graph = builder.build();
+    let mut solver = CppSolver::new(graph);
+    let solution = solver.solve();
+    assert!(solution.is_some());
+    assert_eq!(solution.unwrap().cost, 2.0);
+}
+
+/// Test that a Path calculates its cost correctly.
+#[test]
+fn test_path_cost() {
+    use ndarray::array;
+    let weight_matrix = array![
+        [0.0, 1.0, f64::INFINITY],
+        [f64::INFINITY, 0.0, 2.0],
+        [f64::INFINITY, f64::INFINITY, 0.0]
+    ];
+    let labels = vec!["A".to_string(), "B".to_string(), "C".to_string()];
+    let path = Path::new(vec![0, 1, 2].into_iter().collect(), &weight_matrix, &labels);
+    assert_eq!(
+        path.cost, 3.0,
+        "The cost of the path should be the sum of the edge weights"
+    );
+}
+
+/// Test that a Path formats its display correctly.
+#[test]
+fn test_path_display() {
+    use ndarray::array;
+    let weight_matrix = array![
+        [0.0, 1.0, f64::INFINITY],
+        [f64::INFINITY, 0.0, 2.0],
+        [f64::INFINITY, f64::INFINITY, 0.0]
+    ];
+    let labels = vec!["A".to_string(), "B".to_string(), "C".to_string()];
+    let path = Path::new(vec![0, 1, 2].into_iter().collect(), &weight_matrix, &labels);
+    assert_eq!(
+        path.to_string(),
+        "Path: A->B->C, Cost: 3",
+        "The path display should match the expected format"
+    );
+}

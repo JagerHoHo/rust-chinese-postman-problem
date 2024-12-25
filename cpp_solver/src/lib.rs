@@ -5,7 +5,7 @@ pub use graph::Graph;
 pub use graph::GraphBuilder;
 
 #[cfg(test)]
-mod tests {
+mod integration_tests {
     use super::*;
 
     fn check_path(graph_builder: GraphBuilder, cost: f64) {

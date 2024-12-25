@@ -112,3 +112,34 @@ impl FloydWarshallRunner {
         }
     }
 }
+
+/// Test the shortest path between two nodes in a small graph.
+#[test]
+fn test_shortest_path_between() {
+    let weight_matrix = Array2::from_shape_vec(
+        (3, 3),
+        vec![
+            0.0,
+            1.0,
+            f64::INFINITY,
+            f64::INFINITY,
+            0.0,
+            1.0,
+            1.0,
+            f64::INFINITY,
+            0.0,
+        ],
+    )
+    .unwrap();
+    let runner = FloydWarshallRunner::new(weight_matrix);
+    let path = runner.shortest_path_between(0, 2);
+    assert_eq!(path, vec![0, 1, 2]);
+}
+
+/// Test that the algorithm detects negative cycles in the graph.
+#[test]
+fn test_graph_has_no_negative_cycle() {
+    let weight_matrix = Array2::from_shape_vec((2, 2), vec![0.0, -1.0, -1.0, 0.0]).unwrap();
+    let runner = FloydWarshallRunner::new(weight_matrix);
+    assert!(!runner.graph_has_no_negative_cycle());
+}

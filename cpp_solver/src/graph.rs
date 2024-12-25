@@ -76,8 +76,11 @@ impl GraphBuilder {
 
     /// Builds the graph from the added edges.
     pub fn build(self) -> Graph {
-        let mut weight_matrix =
-            Array2::from_elem((self.max_node + 1, self.max_node + 1), f64::INFINITY);
+        let mut weight_matrix = if self.max_node > 0 {
+            Array2::from_elem((self.max_node + 1, self.max_node + 1), f64::INFINITY)
+        } else {
+            Array2::from_elem((0, 0), f64::INFINITY)
+        };
         for edge in self.edges {
             weight_matrix[[edge.from, edge.to]] = edge.weight;
         }
@@ -202,4 +205,45 @@ impl Graph {
         let in_degree = col.iter().filter(|x| **x != f64::INFINITY).count();
         out_degree as isize - in_degree as isize
     }
+}
+
+/// Test that an empty graph is correctly initialized.
+#[test]
+fn test_empty_graph() {
+    let builder = GraphBuilder::new();
+    let graph = builder.build();
+    let weight_matrix = &graph.weight_matrix;
+
+    // Ensure the matrix dimensions are zero or all entries are `f64::INFINITY`
+    assert!(
+        weight_matrix.is_empty(),
+        "Weight matrix should be empty or all entries should be `f64::INFINITY`"
+    );
+
+    // Check that no node labels are present
+    assert!(
+        graph.node_labels.is_empty(),
+        "Node labels should be empty for an empty graph"
+    );
+}
+
+/// Test adding a labeled edge to the graph and verifying the matrix and labels.
+#[test]
+fn test_add_labeled_edge() {
+    let mut builder = GraphBuilder::new();
+    builder.add_labeled_edge("A", "B", 5.0);
+    let graph = builder.build();
+    assert_eq!(graph.weight_matrix[[0, 1]], 5.0);
+    assert_eq!(graph.node_labels[0], "A");
+    assert_eq!(graph.node_labels[1], "B");
+}
+
+/// Test that out-in degree difference calculations work correctly for balanced graphs.
+#[test]
+fn test_out_in_diff() {
+    let mut builder = GraphBuilder::new();
+    builder.add_edge(0, 1, 1.0).add_edge(1, 0, 1.0);
+    let graph = builder.build();
+    let imbalanced_nodes = graph.imbalanced_nodes();
+    assert!(imbalanced_nodes.empty());
 }
